@@ -73,9 +73,11 @@ class CrawlOnceMiddleware(object):
 
     def spider_opened(self, spider):
         self.db, dbpath = self._spider_db(spider)
+        num_records = len(self.db)
         logger.info("Opened crawl database %r with %d existing records" % (
-            dbpath, len(self.db)
+            dbpath, num_records
         ))
+        self.stats.set_value('crawl_once/initial', num_records)
 
     def spider_closed(self, spider):
         self.db.close()
