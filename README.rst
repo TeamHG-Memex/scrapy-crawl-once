@@ -44,8 +44,13 @@ To enable it, modify your settings.py::
         # ...
     }
 
-By default it does nothing. To avoid crawling a particular page
-multiple times set ``request.meta['crawl_once'] = True``. When a response
+request.meta interface
+~~~~~~~~~~~~~~~~~~~~~~
+
+By default the middlewares do nothing.
+
+To avoid crawling a particular page multiple times set
+``request.meta['crawl_once'] = True``. When a response
 is received and a callback is successful, the fingerprint of such request
 is stored to a database. When spider schedules a new request middleware
 first checks if its fingerprint is in the database, and drops the request
@@ -57,6 +62,43 @@ Other ``request.meta`` keys:
   is stored.
 * ``crawl_once_key`` - request unique id; by default request_fingerprint
   is used.
+
+Manual mode
+~~~~~~~~~~~
+
+To get more control over whether to add a link as seen or not (recrawl it in
+future or not), scrapy-crawl-once allows to access the requests DB directly::
+
+    import scrapy
+    from scrapy_crawl_once import CrawlOnceDB
+
+    class MySpider(scrapy.Spider):
+        # ...
+
+        def parse(self, response):
+            # ... compute url
+            yield scrapy.Request(url, self.parse_foo, meta={'crawl_once': True})
+
+        def parse_foo(self, response, db: CrawlOnceDB):
+            # here you can add request to DB conditionally,
+            # after it is downloaded. E.g. allow to recrawl it
+            # only if "unavailable" text is present on a page:
+
+            if "unavailable" not in response.text.lower():
+                db.mark_seen(response.request)
+
+            # ...
+
+Note how ``CrawlOnceDB`` is requested in a callback - you just need
+to define a callback argument of type CrawlOnceDB.
+
+If ``CrawlOnceDB`` is requested in a callback, scrapy-crawl-once
+doesn't mark request as seen automatically; ``db.mark_seen`` method should
+be called (or not called) explicitly in the callback.
+
+If a callback has ``CrawlOnceDB``-typed argument, but a request was not sent
+with ``meta={'crawl_once': True}``, then the request is not checked against
+duplication database, but the DB itself still can be accessed in the callback.
 
 Settings
 --------
@@ -81,7 +123,11 @@ does almost the same. Differences:
 * scrapy-deltafetch chooses whether to discard a request or not based on
   yielded items; scrapy-crawl-once uses an explicit
   ``request.meta['crawl_once']`` flag.
-* scrapy-deltafetch uses bsddb3, scrapy-crawl-once uses sqlite.
+* scrapy-crawl-once allows to access the fingerprint database,
+  and implement arbitrary logic for deduplication.
+* scrapy-deltafetch uses bsddb3, scrapy-crawl-once uses sqlite;
+  in practice sqlite is more resilient - bsddb3 can be easily corrupted if
+  a spider is killed.
 
 Another alternative is a built-in `Scrapy HTTP cache`_. Differences:
 

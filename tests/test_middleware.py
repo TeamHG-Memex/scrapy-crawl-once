@@ -39,9 +39,9 @@ def test_db_created(tmpdir):
         'CRAWL_ONCE_PATH': str(tmpdir)
     })
     with opened_middleware(crawler) as mw:
-        assert os.path.isfile(mw.db.filename)
-        assert mw.db.filename.startswith(str(tmpdir))
-    assert os.path.isfile(mw.db.filename)
+        assert os.path.isfile(mw.db.db.filename)
+        assert mw.db.db.filename.startswith(str(tmpdir))
+    assert os.path.isfile(mw.db.db.filename)
 
 
 def test_crawl(tmpdir):

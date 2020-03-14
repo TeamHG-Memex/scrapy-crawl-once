@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 import os
-import time
 import logging
 
-from sqlitedict import SqliteDict
 from scrapy import signals
 from scrapy.utils.project import data_path
-from scrapy.utils.request import request_fingerprint
 from scrapy.exceptions import IgnoreRequest, NotConfigured
+
+from .db import CrawlOnceDB
 
 logger = logging.getLogger(__name__)
 
@@ -75,28 +74,19 @@ class CrawlOnceMiddleware(object):
         return o
 
     def spider_opened(self, spider):
-        self.db, dbpath = self._spider_db(spider)
+        self.db = self._create_db(spider)
         num_records = len(self.db)
         logger.info("Opened crawl database %r with %d existing records" % (
-            dbpath, num_records
+            self.db.path, num_records
         ))
         self.stats.set_value('crawl_once/initial', num_records)
 
     def spider_closed(self, spider):
         self.db.close()
 
-    def _spider_db(self, spider):
-        dbpath = os.path.join(self.path, '%s.sqlite' % spider.name)
-        db = SqliteDict(
-            filename=dbpath,
-            tablename='requests',
-            autocommit=True,
-        )
-        return db, dbpath
-
-    def _get_key(self, request):
-        return (request.meta.get('crawl_once_key') or
-                request_fingerprint(request))
+    def _create_db(self, spider):
+        path = os.path.join(self.path, '%s.sqlite' % spider.name)
+        return CrawlOnceDB(path)
 
     # spider middleware interface
     def process_spider_output(self, response, result, spider):
@@ -106,14 +96,13 @@ class CrawlOnceMiddleware(object):
         # response is crawled, store its fingerprint in DB if crawl_once
         # is requested.
         if response.meta.get('crawl_once', self.default):
-            key = self._get_key(response.request)
-            self.db[key] = response.meta.get('crawl_once_value', time.time())
+            self.db.mark_seen(request=response.request)
             self.stats.inc_value('crawl_once/stored')
 
     # downloader middleware interface
     def process_request(self, request, spider):
         if not request.meta.get('crawl_once', self.default):
             return
-        if self._get_key(request) in self.db:
+        if self.db.is_seen(request):
             self.stats.inc_value('crawl_once/ignored')
             raise IgnoreRequest()
