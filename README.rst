@@ -107,5 +107,5 @@ To run tests, install tox_ and run ``tox`` from the source checkout.
 ----
 
 .. image:: https://hyperiongray.s3.amazonaws.com/define-hg.svg
-	:target: https://www.hyperiongray.com/?pk_campaign=github&pk_kwd=scrapy-crawl-once
-	:alt: define hyperiongray
+    :target: https://www.hyperiongray.com/?pk_campaign=github&pk_kwd=scrapy-crawl-once
+    :alt: define hyperiongray

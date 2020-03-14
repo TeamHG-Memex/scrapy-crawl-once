@@ -96,4 +96,3 @@ def test_crawl(tmpdir):
             mw2.process_request(req1, crawler.spider)
         assert crawler.stats.get_value('crawl_once/ignored', 0) == 1
         assert mw2.process_request(req3, crawler.spider) is None
-

@@ -51,6 +51,9 @@ class CrawlOnceMiddleware(object):
       (False by default). When True, all requests are handled by 
       this middleware unless disabled explicitly using 
       ``request.meta['crawl_once'] = False``.
+
+    This middleware puts all requests to the Scheduler, and then filters
+    them out at Downloader.
     """
 
     def __init__(self, path, stats, default):
