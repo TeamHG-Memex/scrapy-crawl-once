@@ -51,15 +51,18 @@ class CrawlOnceMiddleware(object):
       (False by default). When True, all requests are handled by 
       this middleware unless disabled explicitly using 
       ``request.meta['crawl_once'] = False``.
+    * ``CRAWL_ONCE_RESET`` - reset the state, clearing out all seen requests
+      Default is False.
 
     This middleware puts all requests to the Scheduler, and then filters
     them out at Downloader.
     """
 
-    def __init__(self, path, stats, default):
+    def __init__(self, path, stats, default, reset=False):
         self.path = path
         self.stats = stats
         self.default = default
+        self.reset = reset
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -69,13 +72,17 @@ class CrawlOnceMiddleware(object):
         path = data_path(s.get('CRAWL_ONCE_PATH', 'crawl_once'),
                          createdir=True)
         default = s.getbool('CRAWL_ONCE_DEFAULT', default=False)
-        o = cls(path, crawler.stats, default)
+        reset = s.getbool('CRAWL_ONCE_RESET', default=False)
+        o = cls(path, crawler.stats, default, reset)
         crawler.signals.connect(o.spider_opened, signal=signals.spider_opened)
         crawler.signals.connect(o.spider_closed, signal=signals.spider_closed)
         return o
 
     def spider_opened(self, spider):
         self.db, dbpath = self._spider_db(spider)
+        reset = self.reset or getattr(spider, 'crawl_once_reset', False)
+        if reset:
+            self.db.clear()
         num_records = len(self.db)
         logger.info("Opened crawl database %r with %d existing records" % (
             dbpath, num_records
