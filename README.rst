@@ -71,6 +71,8 @@ Settings
   (False by default). When True, all requests are handled by
   this middleware unless disabled explicitly using
   ``request.meta['crawl_once'] = False``.
+* ``CRAWL_ONCE_RESET`` - reset the state, clearing out all seen requests
+Default is False.
 
 Alternatives
 ------------
