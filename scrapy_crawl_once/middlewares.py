@@ -6,7 +6,6 @@ import logging
 from sqlitedict import SqliteDict
 from scrapy import signals
 from scrapy.utils.project import data_path
-from scrapy.utils.request import request_fingerprint
 from scrapy.exceptions import IgnoreRequest, NotConfigured
 
 logger = logging.getLogger(__name__)
@@ -56,10 +55,11 @@ class CrawlOnceMiddleware(object):
     them out at Downloader.
     """
 
-    def __init__(self, path, stats, default):
+    def __init__(self, path, stats, default, crawler):
         self.path = path
         self.stats = stats
         self.default = default
+        self.crawler = crawler
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -69,7 +69,7 @@ class CrawlOnceMiddleware(object):
         path = data_path(s.get('CRAWL_ONCE_PATH', 'crawl_once'),
                          createdir=True)
         default = s.getbool('CRAWL_ONCE_DEFAULT', default=False)
-        o = cls(path, crawler.stats, default)
+        o = cls(path, crawler.stats, default, crawler)
         crawler.signals.connect(o.spider_opened, signal=signals.spider_opened)
         crawler.signals.connect(o.spider_closed, signal=signals.spider_closed)
         return o
@@ -96,7 +96,7 @@ class CrawlOnceMiddleware(object):
 
     def _get_key(self, request):
         return (request.meta.get('crawl_once_key') or
-                request_fingerprint(request))
+                self.crawler.request_fingerprinter.fingerprint(request))
 
     # spider middleware interface
     def process_spider_output(self, response, result, spider):
