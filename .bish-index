@@ -1,0 +1,5 @@
+./setup.py
+./AGENTS.md
+./tests/test_middleware.py
+./scrapy_crawl_once/middlewares.py
+./scrapy_crawl_once/__init__.py
